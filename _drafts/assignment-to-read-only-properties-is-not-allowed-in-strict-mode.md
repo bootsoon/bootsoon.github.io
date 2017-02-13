@@ -145,4 +145,170 @@ var sum = 015 + // !!! syntax error
 
 #### 1. 严格模式禁用with语句
 
-with语句的问题在于，任何处于with代码块中的变量名既可能是对象的属性，也可能是外层scope的变量（甚至是全局变量）。
+with语句的问题在于，任何处于with代码块中的变量名既可能是对象的属性，也可能是外层作用域的变量（甚至是全局变量）。在程序运行状态时，没办法提前知道。严格模式把with语句变成一个语法错误，因此，在程序运行时，一个变量没有机会在with语句块中指向一个未知位置。
+
+{% highlight javascript linenos %}
+'use strict';
+var x = 17;
+with(obj){ // !!! syntax error
+  // If this weren't strict mode, would this be var x, or
+  // would it instead be obj.x? It's impossible in general
+  // to say without running the code, so the name can't be
+  // optimized.
+  x;
+}
+{% endhighlight %}
+
+把对象赋值给一个短名称变量，然后访问这个变量的相应属性的简单替代方法，还没有准备好。
+
+#### 2. 严格模式下的eval语句不会引入向当前作用域引入新变量
+
+常规模式下，eval("var x;") 引入一个x变量到当前函数或全局作用域。这就是说，一般情况下，在程序运行时，在一个包含eval调用的函数中，每个不指向函数参数的局部变量必须被映射到一个特殊的定义（因为eval可能引入了一个新变量，这个新变量会隐藏外层变量）。在严格模式下，eval只为被求值的语句创建变量，因此不影响一个变量名称指向的是一个外层变量还是某个局部变量。
+
+{% highlight javascript linenos %}
+var x = 17;
+var evalX = eval("'use strict'; var x= 42; x;");
+console.assert(x === 17);
+console.assert(evalX = 42);
+{% endhighlight %}
+
+相应的，如果在严格模式下通过表达式eval(...)调用eval函数，代码会按照严格模式来求值。尽管代码可以显式地声明严格模式，但也不必要这样做。
+
+{% highlight javascript linenos %}
+function strict1(str){
+  'use strict';
+  return eval(str); // str will be treated as strict mode code
+}
+function strict2(f, str){
+  'use strict';
+  return f(str); // not eval(...): str is strict if and only
+                 // if it invokes strict mode
+}
+function nonStrict(str){
+  return eval(str); // str is strict if and only
+                    // if it invokes strict mode
+}
+strict1("'Strict mode code!'");
+strict1("'use strict'; 'Strict mode code!'")
+strict2(eval, "'Non-strict code.'");
+strict2(eval, "'use strict'; 'Strict mode code!'");
+nonStrict("'Non-strict code.'");
+nonStrict("'use strict'; 'Strict mode code!'");
+{% endhighlight %}
+
+Thus 
+names
+  in strict mode eval code 
+behave 
+identically 
+  to names 
+       in strict mode code not being evaluated as the result of eval.
+
+？ 这样的话，严格模式下，eval代码中的name与那些不作为eval调用结果的name表现出相同的行为。
+
+eval本身的古怪行为，也值得探究一番：
+
+{% highlight javascript linenos %}
+var x = 'outer';
+(function() {
+  var x = 'inner';
+  eval('console.log("direct call: " + x)'); 
+  (1,eval)('console.log("indirect call: " + x)'); 
+})();
+{% endhighlight %}
+
+{% highlight bash %}
+direct call: inner
+indirect call: outer
+{% endhighlight %}
+
+不理解啊！啥意思？
+
+
+#### 3. 严格模式禁止删除plain names， delete name在严格模式是个语法错误
+
+{% highlight javascript linenos %}
+'use strict';
+var x;
+delete x; // !!! syntax error
+
+eval('var y; delete y;'); // !!! syntax error
+{% endhighlight %}
+
+### eval和arguments变得更简单
+
+严格模式使得arguments和eval不那么奇怪。在常规代码中，这两者都牵扯到大量奇怪的行为：eval会增加或删除绑定，还会改变绑定的值，arguments用它的索引属性来给形参添加了别名。严格模式把eval和arguments视为关键字，这是长足的进步，尽管完整的补丁在未来版本的ESMAScript中才会有。
+
+#### 1. eval和arguments不能被绑定或赋值，这样做是语法错误
+
+{% highlight javascript linenos %}
+'use strict';
+eval = 17;
+arguments++;
+++eval;
+var obj = { set p(arguments) {} };
+var eval;
+try {} catch (arguments) {}
+function x(eval) {}
+function arguments() {}
+var y = function eval() {};
+var f = new Function('arguments', "'use strict'; return 17;");
+{% endhighlight %}
+
+#### 2. 严格模式不会把函数内部创建的arguments对象的属性别名化。
+
+常规模式下，在函数内，如果arg是第一个参数，设置arg也就是设置arguments[0], 反之亦然，除非没有参数被传递或者arguments[0]被删掉了。严格模式下，当函数被调用时，函数保存arguments原始值，arguments[i]不跟随对应的形参，形参也不跟随对应的arguments[i]。
+
+{% highlight javascript linenos %}
+function f(a){
+  'use strict';
+  a = 42;
+  return [a, arguments[0]];
+}
+var pair = f(17);
+console.assert(pair[0] === 42);
+console.assert(pair[1] === 17);
+{% endhighlight %}
+
+#### 3. 不再支持 arguments.callee 
+
+在常规代码中，arguments.callee指向封装函数，这个用法很脆弱，简单地命名封装函数。此外，arguments.callee在很大程度上妨碍了优化，比如内联函数，因为，如果arguments.callee被访问乐，就必须被提供一个指向非内联函数的引用。严格模式函数的arguments.callee是一个non-deletable属性，存取它会抛出异常。
+
+{% highlight javascript linenos %}
+'use strict';
+var f = function() {
+  return arguments.callee;
+};
+f();
+{% endhighlight %}
+
+### 更安全的JavaScript
+
+严格模式使得我们更易于写出安全的JavaScript。有些网站目前允许用户写JavaScript代码，网站替其它用户运行这些代码。JavaScript在浏览器中可以访问用户隐私，因此这样的JavaScript代码在运行前，必须被部分改造，以审查是否存在对禁用功能的访问。如果没有很多运行时检查，JavaScript的灵活性使得这样做实际上是不可能的。这样的语言函数太多以至于执行运行时检查有着显著的性能损失。几个严格模式的小技巧，
+
+A few strict mode tweaks, plus requiring that user-submitted JavaScript be strict mode code and that it be invoked in a certain manner, substantially reduce the need for those runtime checks.
+
+#### 1. 不再强制传递给this的值是一个对象。
+
+对于常规模式的函数，this总是一个对象，无论用一个对象this；如果用一个布尔this，字符串this或者数字this，
+
+如果用对象来调用，this就是提供的对象；
+如果用Boolean,string或number的this来调用，this就是提供的变量值；
+如果用undefined或null的this来调用，this就是global对象。
+
+可以用call, apply, 或者bind来指定一个特定的this。不仅自动装箱是一个性能损失，而且在浏览器中暴露全局对象也是一个安全隐患，因为全局对象提供了那些功能的访问，这些功能是“安全的”JavaScript环境必须限制的。因此，对于一个严格模式函数，指定的this不被装箱成一个对象，如果没有指定this，this就是undefined:
+
+{% highlight javascript linenos %}
+'use strict';
+function fun() { return this; }
+console.assert(fun() === undefined);
+console.assert(fun.call(2) === 2);
+console.assert(fun.apply(null) === null);
+console.assert(fun.call(undefined) === undefined);
+console.assert(fun.bind(true)() === true);
+{% endhighlight %}
+
+
+
+{% highlight javascript linenos %}
+{% endhighlight %}
