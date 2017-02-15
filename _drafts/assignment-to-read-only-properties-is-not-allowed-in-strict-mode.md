@@ -19,7 +19,7 @@ strict mode针对普通JavaScript的语义做了几个改变：
 * 其次，修正了一些导致让JavaScript引擎难以优化性能的错误，这使得strict mode代码通常比同等的non-strict mode执行得更快。
 * 最后，strict mode禁用了一些语法可能在未来版本的ECMAScript中定义的语法。
 
-有时候，能看到标准的、non-strict模式被称为"sloppy mode"(马大哈模式)，这不是官方术语，但也应该有所了解，以避免被蒙圈。
+有时候，能看到标准的、non-strict模式被称为"懒散模式"(sloppy mode)，这不是官方术语，但也应该有所了解，以免蒙圈。
 
 ## 启用严格模式
 
@@ -307,6 +307,106 @@ console.assert(fun.apply(null) === null);
 console.assert(fun.call(undefined) === undefined);
 console.assert(fun.bind(true)() === true);
 {% endhighlight %}
+
+这意味着，严格模式下，不再能通过this指向window对象。
+
+#### 2. 严格模式下，不能通过常规实现的ECMAScript扩展来遍历JavaScript堆栈。
+
+在常规模式下，当函数fun正在被调用时，fun.callee是那个最近调用fun的函数，fun.arguments是那次调用的arguments。这两个扩展对于安全的JavaScript来说都是有问题的，因为它们允许“安全的代码”访问“特权”函数和这些函数的潜在的部安全的参数。如果fun放在严格模式下，fun.caller和fun.arguments都是non-deletable属性，存取它们会报错。
+
+{% highlight javascript linenos %}
+function restricted() {
+  'use strict';
+  restricted.caller; // throws a TypeError
+  restricted.arguments; // throw a TypeError
+}
+function privilegedInvoker(){
+  return restricted();
+}
+privilegedInvoker();
+{% endhighlight %}
+
+
+#### 3. 严格模式下的arguments不再提供对相应的函数调用的变量的访问。在同样的ECMAScript实现中，arguments.caller是一个对象，这个对象的属性别名化了这个函数中的变量。这是一个安全隐患，因为它破坏了通过函数抽象来隐藏特权变量的能力。它还妨碍了大部分优化。考虑到这些理由，没有最近的浏览器实现它。但是由于它的历史功能，严格模式下的arguments.caller也是一个non-deletable属性，读写它都会报错。
+
+{% highlight javascript linenos %}
+'use strict';
+function fun(a, b){
+  'use strict';
+  var v = 12;
+  return argument.caller; // throws a TypeError
+}
+fun(1, 2); // doesn't expose v (or a or b)
+{% endhighlight %}
+
+
+### 为ECMAScript的未来版本做好准备
+
+未来的ECMAScript版本可能引入新语法，ECMAScript 5的严格模式下使用了一些限制，以便顺利过度。
+
+#### 1. 严格模式下一小部分标识符变成了保留字。
+
+这些保留字是：implements, interface, let, package, private, protected, public, static和yield。在严格模式下，你不能命名和使用这些保留字。
+
+{% highlight javascript linenos %}
+function package(protected){ // !!!
+  'use strict';
+  var implements; // !!!
+  
+  interface:  // !!!
+  while (true) {
+    break interface; // !!!
+  }
+
+  function private() { } // !!!
+}
+function fun(static) { 'use strict' } // !!!
+{% endhighlight %}
+
+
+#### 2. 严格模式禁止非顶级的函数声明。
+
+浏览器的常规模式下，函数声明可以在任何地方。（这不符合ES5甚至ES3!）这是一个不同浏览器的兼容性扩展。未来的ECMAScript版本有希望未非顶层的函数声明定义新的函数声明语义。禁止此类函数声明为将来版本的ECMAScript的语言规范扫除障碍。
+
+
+{% highlight javascript linenos %}
+'use strict';
+if (true) {
+  function f() {} // !!! syntax error
+  f();
+}
+
+for (var i = 0; i < 5; i++) {
+  function f2() {} // !!! syntax error
+  f2()
+}
+
+function baz() { // kosher
+  function eit() {} //kosher
+}
+{% endhighlight %}
+
+这种禁止并不适合严格模式，因为这种函数声明是基础ES5的扩展。但这是ECMAScript委员会推荐的做法，浏览器会实现它。
+
+### 浏览器的严格模式
+
+现在主流浏览器都实现了严格模式。但也不要盲目地依赖它，因为仍然有很多还在使用的浏览器版本仅支持部分严格模式，或者支持
+得不完整（例如，IE10之前的版本）。严格模式改变语义。在未实现严格模式的浏览器中，依赖这些改变会引起错误。谨慎地使用严格模式，如果你只在不支持严格模式的浏览器下测试，很有可能在支持严格模式下的浏览器上遇到问题，反之亦然。
+
+
+# 本文引出的问题：
+
+* mistake vs. error
+
+  mistake:  If you make a mistake, you do something which you did not intend to do, or which produces a result that you do not want.
+
+  erro: An error is something you have done that is considered to be incorrect or wrong, or that should not have been done. 
+
+* syntax vs. semantic
+
+  syntax:  Syntax is the set of rules that describes how a computer language can be used to make programs.
+
+  semantic: Semantic is used to describe things that deal with the meanings of words and sentences. 
 
 
 
