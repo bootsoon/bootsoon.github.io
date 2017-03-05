@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Assignment to read-only properites is not allowed in strict mode
+title: Assignment to read-only properties is not allowed in strict mode
 date:   2017-02-18 16:00:00 +0800
 categories: angular 
 tags: [angular, css, strict-mode]
