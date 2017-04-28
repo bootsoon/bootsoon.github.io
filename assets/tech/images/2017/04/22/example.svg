@@ -1,0 +1,11 @@
+<svg height="176" width="176" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 88 8 A 80 80 0 1 1 23.27864045000419 40.97717981660217" stroke="rgb(120, 192, 0)" stroke-width="8" stroke-linecap="round" fill="none"></path>
+  <circle cx="88" cy="88" r="72" fill="none" stroke="rgb(199, 229, 150)" stroke-width="4"></circle>
+  <text text-anchor="middle" x="88" y="88">
+    <tspan font-size="2em" fill="rgb(68, 68, 68)">85</tspan>
+    <tspan font-size="0.8em">%</tspan>
+  </text>
+  <text text-anchor="middle" fill="darkgray" x="88" y="103">
+    <tspan font-size="0.8em">任务进度</tspan>
+  </text>
+</svg>

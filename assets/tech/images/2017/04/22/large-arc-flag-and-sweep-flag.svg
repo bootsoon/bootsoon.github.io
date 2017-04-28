@@ -1,0 +1,16 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="800" height="400" fill="black" fill-opacity="0.8" />`
+  <path id="large-0-sweep-0" d="M400 100 A 200 150, 0, 0, 0, 400 300" fill="none" stroke="green" stroke-width="5" />
+  <path id="large-1-sweep-0" d="M400 100 A 200 150, 0, 1, 0, 400 300" fill="none" stroke="green" stroke-width="5" />
+  <path id="large-1-sweep-1" d="M400 100 A 200 150, 0, 1, 1, 400 300" fill="none" stroke="green" stroke-width="5" />
+  <path id="large-0-sweep-1" d="M400 100 A 200 150, 0, 0, 1, 400 300" fill="none" stroke="green" stroke-width="5" />
+  <circle fill="red" cx="400" cy="100" r="5"></circle>
+  <circle fill="red" cx="400" cy="300" r="5"></circle>
+  <text x="400" y="90" fill="white" text-anchor="middle" font-size="18">起点</text>
+  <text x="400" y="320" fill="white" text-anchor="middle" font-size="18">终点</text>
+  <text x="445" y="200" fill="white" text-anchor="start" font-size="18">① 顺时针短弧</text>
+  <text x="355" y="200" fill="white" text-anchor="end" font-size="18">逆时针短弧 ②</text>
+  <text x="45" y="200" fill="white" text-anchor="start" font-size="18">③ 逆时针长弧</text>
+  <text x="755" y="200" fill="white" text-anchor="end" font-size="18">顺时针长弧 ④</text>
+</svg>
+
